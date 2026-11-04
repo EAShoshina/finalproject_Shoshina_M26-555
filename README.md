@@ -83,7 +83,6 @@ uv run wallet
 ## 💻 Команды CLI
 
 ### Основные команды
-```
 | Команда | Описание |
 |---------|----------|
 | `register --username <name> --password <pass>` | Регистрация нового пользователя |
@@ -93,20 +92,18 @@ uv run wallet
 | `buy --currency <curr> --amount <num>` | Купить валюту |
 | `sell --currency <curr> --amount <num>` | Продать валюту (с подтверждением) |
 | `get-rate --from <curr> --to <curr>` | Узнать курс валюты |
-```
+
 ### Команды Parser Service
-```
 | Команда | Описание |
 |---------|----------|
 | `update-rates [--source <src>]` | Обновить курсы из внешних API (coingecko / exchangerate) |
 | `show-rates [--currency <curr>] [--top <n>]` | Показать кэш курсов с фильтрацией |
-
 ---
-```
+
 ## 📋 Примеры использования
 
 ### 1. Покупка и просмотр портфеля
-```text
+
 wallet> buy --currency BTC --amount 0.5
 Покупка выполнена: 0.5000 BTC по курсу 59337.21 USD/BTC
 Изменения в портфеле:
@@ -122,4 +119,73 @@ wallet> show-portfolio
 | EUR    | 1000.0000 |     1.0786 |        1,078.60 |
 | ИТОГО  |           |            |   30,747.20 USD |
 +--------+-----------+------------+-----------------+
+
+##### 💻 Команды CLI
+
+### Основные команды
+| Команда | Описание |
+|---------|----------|
+| `register --username <name> --password <pass>` | Регистрация нового пользователя |
+| `login --username <name> --password <pass>` | Вход в систему |
+| `logout` | Выход из системы |
+| `show-portfolio [--base <curr>]` | Показать портфель в виде таблицы |
+| `buy --currency <curr> --amount <num>` | Купить валюту |
+| `sell --currency <curr> --amount <num>` | Продать валюту (с подтверждением) |
+| `get-rate --from <curr> --to <curr>` | Узнать курс валюты |
+
+### Команды Parser Service
+| Команда | Описание |
+|---------|----------|
+| `update-rates [--source <src>]` | Обновить курсы из внешних API (coingecko / exchangerate) |
+| `show-rates [--currency <curr>] [--top <n>]` | Показать кэш курсов с фильтрацией |
+
+---
+
+## 📋 Примеры использования
+
+### 2. Продажа с подтверждением и обработка ошибок
+wallet> sell --currency BTC --amount 5.0
+
+Вы уверены, что хотите продать эту валюту? [y/N]: y
+Ошибка: Недостаточно средств: доступно 0.5000 BTC, требуется 5.0000 BTC
+
+wallet> buy --currency DOGE --amount 100
+Ошибка: Неизвестная валюта 'DOGE'
+
+### 3. Работа с курсами (Parser Service)
+wallet> update-rates
+Update successful. Total rates updated: 6.
+
+wallet> show-rates --top 2
+Rates from cache (last refresh: 2026-11-04T16:27:41):
++---------+--------------+---------------------+-----------+
+| Пара    |         Курс |           Обновлено |  Источник |
++---------+--------------+---------------------+-----------+
+| BTC_USD | 80445.000000 | 2026-11-04T16:27:41 | CoinGecko |
+| ETH_USD |  2430.140000 | 2026-11-04T16:27:41 | CoinGecko |
++---------+--------------+---------------------+-----------+
+
+### 🔧 Продвинутые возможности (Архитектура)
+
+- 🏛️ **Паттерны проектирования**:
+  - **Singleton**: `SettingsLoader` (конфигурация), `DatabaseManager` (работа с JSON через `__new__`).
+  - **Factory**: `get_currency()` — фабрика валют с реестром.
+  - **ABC**: `Currency` → `FiatCurrency`, `CryptoCurrency` (полиморфизм).
+  - **Decorator**: `@log_action`, `@confirm_action`, `@rate_cache`.
+- 📝 **Логирование**: Все операции логируются в `logs/actions.log` с ротацией (5 МБ, 3 бэкапа) через `RotatingFileHandler`.
+- 🔐 **Безопасность**: Пароли хешируются через `hashlib.sha256(password + salt)`. Безопасный парсинг CLI-аргументов через `shlex`.
+- 🌐 **Отказоустойчивость API**: Если один API (например, ExchangeRate-API) возвращает ошибку (403/429), `RatesUpdater` перехватывает исключение, логирует его и успешно продолжает работу, получая данные от второго источника (CoinGecko).
+- ⚡ **Кэширование**: Курсы кэшируются в `data/rates.json` с настраиваемым TTL (по умолчанию 5 минут) через замыкание `@rate_cache`.
+### Настройка API-ключей
+Для полноценной работы с фиатными валютами получите бесплатный ключ на exchangerate-api.com и установите переменную окружения перед запуском:
+#### Windows (PowerShell):
 ```
+$env:EXCHANGERATE_API_KEY="ваш_ключ_здесь"
+uv run wallet
+```
+#### Linux / macOS:
+```
+export EXCHANGERATE_API_KEY="ваш_ключ_здесь"
+uv run wallet
+```
+Без ключа приложение использует демо-режим с ограничениями.
