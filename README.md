@@ -67,9 +67,10 @@ finalproject_Shoshina_M26-555/
 - [uv](https://docs.astral.sh/uv/) — современный менеджер пакетов
 
 ### Установка
+
 ```bash
 # Клонировать репозиторий
-git clone <https://github.com/EAShoshina/finalproject_Shoshina_M26-555>
+git clone https://github.com/EAShoshina/finalproject_Shoshina_M26-555.git
 cd finalproject_Shoshina_M26-555
 
 # Установить зависимости (uv автоматически создаст .venv)
