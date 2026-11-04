@@ -1,8 +1,11 @@
 """Command-line interface for the currency wallet."""
 
+import json
 import shlex
 import sys
 from typing import Any
+
+from prettytable import PrettyTable
 
 from ..core.usecases import AppContext
 from ..exceptions import (
@@ -10,6 +13,9 @@ from ..exceptions import (
     CurrencyNotFoundError,
     InsufficientFundsError,
 )
+from ..parser_service.config import ParserConfig
+from ..parser_service.storage import ParserStorage
+from ..parser_service.updater import RatesUpdater
 
 
 def print_error(message: str) -> None:
@@ -69,6 +75,8 @@ def main() -> None:
                     "  buy --currency <curr> --amount <num>          : Купить\n"
                     "  sell --currency <curr> --amount <num>         : Продать\n"
                     "  get-rate --from <curr> --to <curr>            : Узнать курс\n"
+                    "  update-rates [--source <src>]                 : Обновить курсы\n"
+                    "  show-rates [--currency <curr>] [--top <n>]    : Показать курсы\n"
                     "  exit                                          : Выход"
                 )
 
@@ -130,7 +138,6 @@ def main() -> None:
                     ApiRequestError,
                 ) as e:
                     print_error(str(e))
-
             elif command == "sell":
                 currency = kwargs.get("currency")
                 amount_str = kwargs.get("amount")
@@ -150,7 +157,7 @@ def main() -> None:
                         print_error(str(e))
                 except (
                     CurrencyNotFoundError,
-                    InsufficientFundsError,
+                    InsufficientFundsError,  # <-- Убедись, что эта строка есть
                     ApiRequestError,
                 ) as e:
                     print_error(str(e))
@@ -172,16 +179,121 @@ def main() -> None:
                 except ValueError as e:
                     print_error(str(e))
 
+            elif command == "update-rates":
+                source = kwargs.get("source")
+                if source and source.lower() not in ("coingecko", "exchangerate"):
+                    print_error("Источник должен быть 'coingecko' или 'exchangerate'")
+                    continue
+
+                try:
+                    config = ParserConfig()
+                    storage = ParserStorage(config)
+                    updater = RatesUpdater(config, storage)
+                    result = updater.run_update(source_filter=source)
+
+                    if result["success"]:
+                        print(
+                            f"Update successful. Total rates updated: "
+                            f"{result['rates_count']}."
+                        )
+                    else:
+                        print(
+                            "Update completed with errors. "
+                            "Check logs/actions.log for details."
+                        )
+                        for err in result["errors"]:
+                            print_error(err)
+                except ApiRequestError as e:
+                    print_error(str(e))
+                except Exception as e:
+                    print_error(f"Непредвиденная ошибка: {e}")
+
+            elif command == "show-rates":
+                currency_filter = kwargs.get("currency")
+                top_n_str = kwargs.get("top")
+
+                try:
+                    top_n = int(top_n_str) if top_n_str else None
+                except ValueError:
+                    print_error("Аргумент --top должен быть числом")
+                    continue
+
+                config = ParserConfig()
+                if not config.rates_file_path.exists():
+                    print_error(
+                        "Локальный кеш курсов пуст. "
+                        "Выполните 'update-rates', чтобы загрузить данные."
+                    )
+                    continue
+
+                with open(config.rates_file_path, encoding="utf-8") as f:
+                    data = json.load(f)
+
+                pairs = data.get("pairs", {})
+                last_refresh = data.get("last_refresh", "неизвестно")
+
+                if not pairs:
+                    print("Кеш пуст.")
+                    continue
+                # Фильтрация
+                filtered_pairs = {}
+                for pair, info in pairs.items():
+                    if currency_filter and currency_filter.upper() not in pair:
+                        continue
+                    filtered_pairs[pair] = info
+
+                if not filtered_pairs:
+                    print_error(f"Курс для '{currency_filter}' не найден в кеше.")
+                    continue
+
+                # Сортировка
+                if top_n:
+                    sorted_pairs = sorted(
+                        filtered_pairs.items(),
+                        key=lambda x: x[1]["rate"],
+                        reverse=True,
+                    )[:top_n]
+                else:
+                    sorted_pairs = sorted(filtered_pairs.items())
+
+                # Вывод таблицы
+                table = PrettyTable()
+                table.field_names = ["Пара", "Курс", "Обновлено", "Источник"]
+                table.align = "r"
+                table.align["Пара"] = "l"
+
+                for pair, info in sorted_pairs:
+                    table.add_row(
+                        [
+                            pair,
+                            f"{info['rate']:.6f}",
+                            info["updated_at"][:19],
+                            info["source"],
+                        ]
+                    )
+
+                print(f"Rates from cache (last refresh: {last_refresh[:19]}):")
+                print(table.get_string())
+
             else:
                 print_error(
                     f"Неизвестная команда: '{command}'. Введите 'help' для справки."
                 )
-
         except KeyboardInterrupt:
             print("\nДо свидания!")
             sys.exit(0)
         except Exception as e:
-            print_error(f"Непредвиденная ошибка: {e}")
+            # Если это ошибка недостатка средств или неизвестной валюты,
+            # выводим чисто
+            error_text = str(e)
+            is_known_error = (
+                "Недостаточно средств" in error_text
+                or "Неизвестная валюта" in error_text
+            )
+            if is_known_error:
+                print_error(error_text)
+            else:
+                print_error(f"Непредвиденная ошибка: {e}")
 
 
 if __name__ == "__main__":

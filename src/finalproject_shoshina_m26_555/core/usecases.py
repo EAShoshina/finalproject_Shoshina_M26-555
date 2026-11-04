@@ -4,11 +4,11 @@ from datetime import datetime
 
 from prettytable import PrettyTable
 
+from ..infra.database import db
+from ..infra.settings import settings
 from .currencies import get_currency
 from .decorators import confirm_action, log_action, rate_cache
 from .exceptions import ApiRequestError, InsufficientFundsError
-from .infra.database import db
-from .infra.settings import settings
 from .models import Portfolio, User
 
 
