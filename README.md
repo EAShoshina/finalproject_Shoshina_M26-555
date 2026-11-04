@@ -69,7 +69,7 @@ finalproject_Shoshina_M26-555/
 ### Установка
 ```bash
 # Клонировать репозиторий
-git clone <your-repo-url>
+git clone <https://github.com/EAShoshina/finalproject_Shoshina_M26-555>
 cd finalproject_Shoshina_M26-555
 
 # Установить зависимости (uv автоматически создаст .venv)
