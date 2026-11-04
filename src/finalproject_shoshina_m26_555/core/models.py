@@ -113,7 +113,8 @@ class Wallet:
             raise ValueError("'amount' должен быть положительным числом")
         if amount > self.balance:
             raise ValueError(
-                f"Недостаточно средств: доступно {self.balance:.4f}, требуется {amount:.4f}"
+                f"Недостаточно средств: доступно {self.balance:.4f}, "
+                f"требуется {amount:.4f}"
             )
         self.balance -= amount
 

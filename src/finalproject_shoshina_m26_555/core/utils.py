@@ -6,7 +6,8 @@ import secrets
 from pathlib import Path
 from typing import Any
 
-# Определяем путь к папке data (4 уровня вверх от utils.py: core -> package -> src -> root)
+# Определяем путь к папке data
+# (4 уровня вверх от utils.py: core -> package -> src -> root)
 DATA_DIR = Path(__file__).resolve().parents[4] / "data"
 
 
