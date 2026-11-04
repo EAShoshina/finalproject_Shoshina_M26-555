@@ -59,7 +59,7 @@ finalproject_Shoshina_M26-555/
 ├── README.md                      # Документация проекта
 ├── demo_script.md                 # Сценарий демонстрации
 └── .gitignore
-
+```
 ## 🛠️ Установка и запуск
 
 ### Требования
@@ -74,7 +74,7 @@ cd finalproject_Shoshina_M26-555
 
 # Установить зависимости (uv автоматически создаст .venv)
 uv sync
-
+```
 ## Запуск
 ```
 uv run wallet
@@ -83,6 +83,7 @@ uv run wallet
 ## 💻 Команды CLI
 
 ### Основные команды
+```
 | Команда | Описание |
 |---------|----------|
 | `register --username <name> --password <pass>` | Регистрация нового пользователя |
@@ -92,15 +93,16 @@ uv run wallet
 | `buy --currency <curr> --amount <num>` | Купить валюту |
 | `sell --currency <curr> --amount <num>` | Продать валюту (с подтверждением) |
 | `get-rate --from <curr> --to <curr>` | Узнать курс валюты |
-
+```
 ### Команды Parser Service
+```
 | Команда | Описание |
 |---------|----------|
 | `update-rates [--source <src>]` | Обновить курсы из внешних API (coingecko / exchangerate) |
 | `show-rates [--currency <curr>] [--top <n>]` | Показать кэш курсов с фильтрацией |
 
 ---
-
+```
 ## 📋 Примеры использования
 
 ### 1. Покупка и просмотр портфеля
