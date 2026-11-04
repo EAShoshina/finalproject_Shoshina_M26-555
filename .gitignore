@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+*.egg
 
 # Virtual environments
 .venv/
@@ -16,8 +17,20 @@ env/
 .vscode/
 *.swp
 *.swo
+*~
 
-# Project data
-wallet_data.json
-*.log
+# Environment variables (API keys)
+.env
+.env.local
+
+# Logs
 logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
