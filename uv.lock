@@ -1,6 +1,6 @@
 version = 1
 revision = 5
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 
 [[package]]
 name = "finalproject-shoshina-m26-555"
@@ -16,10 +16,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "prettytable", specifier = ">=3.18.0" }]
+requires-dist = [{ name = "prettytable", specifier = ">=3.10.0" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.17.3" }]
+dev = [{ name = "ruff", specifier = ">=0.6.0" }]
 
 [[package]]
 name = "prettytable"

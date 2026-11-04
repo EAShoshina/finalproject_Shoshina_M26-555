@@ -1,21 +1,36 @@
 [project]
 name = "finalproject-shoshina-m26-555"
 version = "0.1.0"
-description = "Add your description here"
+description = "Console currency wallet simulator"
 readme = "README.md"
+requires-python = ">=3.11"
 authors = [
-    { name = "ceciliar", email = "ceciliar@student.21-school.ru" }
+    { name = "E.A. Shoshina", email = "evgeniia.shoshina.rudn@yandex.ru" }
 ]
-requires-python = ">=3.12"
 dependencies = [
-    "prettytable>=3.18.0",
+    "prettytable>=3.10.0",
 ]
 
-[build-system]
-requires = ["uv_build>=0.13.4,<0.14.0"]
-build-backend = "uv_build"
+# Обратите внимание: здесь теперь строчные буквы и подчёркивания!
+[project.scripts]
+wallet = "finalproject_shoshina_m26_555.cli:main"
 
 [dependency-groups]
 dev = [
-    "ruff>=0.17.3",
+    "ruff>=0.6.0",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "TCH"]
+
+# Явно указываем hatchling, где лежит наш пакет
+[tool.hatch.build.targets.wheel]
+packages = ["src/finalproject_shoshina_m26_555"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
