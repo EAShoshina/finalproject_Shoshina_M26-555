@@ -13,7 +13,7 @@ dependencies = [
 
 # Обратите внимание: здесь теперь строчные буквы и подчёркивания!
 [project.scripts]
-wallet = "finalproject_shoshina_m26_555.cli:main"
+wallet = "finalproject_shoshina_m26_555.cli.interface:main"
 
 [dependency-groups]
 dev = [
