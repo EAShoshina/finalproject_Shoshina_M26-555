@@ -88,11 +88,13 @@ class AppContext:
         if not self.current_user or not self.current_portfolio:
             raise ValueError("Сначала выполните login")
 
+        base = base_currency.upper()
+        get_currency(base)
+
         wallets = self.current_portfolio.wallets
         if not wallets:
             return f"Портфель пользователя '{self.current_user.username}' пуст."
 
-        base = base_currency.upper()
         table = PrettyTable()
         table.field_names = [
             "Валюта",
@@ -167,7 +169,9 @@ class AppContext:
         if amount <= 0:
             raise ValueError("'amount' должен быть положительным числом")
 
-        currency_code = currency.upper()
+        currency_obj = get_currency(currency)
+        currency_code = currency_obj.code
+
         wallet = self.current_portfolio.get_wallet(currency_code)
 
         old_balance = wallet.balance

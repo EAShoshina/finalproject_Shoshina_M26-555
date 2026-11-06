@@ -1,0 +1,33 @@
+register --username alice --password 1234 # дважды
+register --username bob --password 1
+
+login --username alice --password wrong
+login --username alice --password 1234
+
+buy --currency BTC --amount 0.5
+buy --currency EUR --amount 100
+buy --currency DOGE --amount 100
+buy --currency BTC --amount -1
+show-portfolio
+show-portfolio --base EUR
+sell --currency BTC --amount 0.1 #n
+sell --currency BTC --amount 5 #y
+sell --currency BTC --amount 0.1 #y
+sell --currency DOGE --amount 0.1 #y
+
+get-rate --from BTC --to USD
+get-rate --from EUR --to USD
+get-rate --from USD --to USD
+get-rate --from DOGE --to USD
+
+update-rates --source coingecko
+show-rates --top 3
+show-rates --currency BTC
+update-rates --source exchangerate
+update-rates
+show-rates
+
+logout
+exit
+
+Get-Content C:\Users\evgen\finalproject_Shoshina_M26-555\logs\actions.log -Tail 20

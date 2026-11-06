@@ -113,7 +113,7 @@ def main() -> None:
                 base = kwargs.get("base", "USD")
                 try:
                     print(context.show_portfolio(base))
-                except ValueError as e:
+                except (ValueError, ApiRequestError, CurrencyNotFoundError) as e:
                     print_error(str(e))
 
             elif command == "buy":
@@ -126,18 +126,20 @@ def main() -> None:
 
                 try:
                     amount = float(amount_str)
+                except ValueError:
+                    print_error("'amount' должен быть числом")
+                    continue
+
+                try:
                     print(context.buy(currency=currency, amount=amount))
-                except ValueError as e:
-                    if "could not convert string to float" in str(e):
-                        print_error("'amount' должен быть числом")
-                    else:
-                        print_error(str(e))
                 except (
+                    ValueError,
                     CurrencyNotFoundError,
                     InsufficientFundsError,
                     ApiRequestError,
                 ) as e:
                     print_error(str(e))
+
             elif command == "sell":
                 currency = kwargs.get("currency")
                 amount_str = kwargs.get("amount")
@@ -148,16 +150,16 @@ def main() -> None:
 
                 try:
                     amount = float(amount_str)
-                    result = context.sell(currency=currency, amount=amount)
-                    print(result)
-                except ValueError as e:
-                    if "could not convert string to float" in str(e):
-                        print_error("'amount' должен быть числом")
-                    else:
-                        print_error(str(e))
+                except ValueError:
+                    print_error("'amount' должен быть числом")
+                    continue
+
+                try:
+                    print(context.sell(currency=currency, amount=amount))
                 except (
+                    ValueError,
                     CurrencyNotFoundError,
-                    InsufficientFundsError,  # <-- Убедись, что эта строка есть
+                    InsufficientFundsError,
                     ApiRequestError,
                 ) as e:
                     print_error(str(e))
@@ -173,9 +175,14 @@ def main() -> None:
                 try:
                     print(context.get_rate(from_curr, to_curr))
                 except CurrencyNotFoundError as e:
-                    print_error(f"{e}. Поддерживаемые коды: USD, EUR, RUB, BTC, ETH")
+                    print_error(
+                        f"{e}. Поддерживаемые коды: "
+                        f"USD, EUR, RUB, BTC, ETH, SOL"
+                    )
                 except ApiRequestError as e:
-                    print_error(f"{e}. Повторите попытку позже или проверьте сеть.")
+                    print_error(
+                        f"{e}. Повторите попытку позже или проверьте сеть."
+                    )
                 except ValueError as e:
                     print_error(str(e))
 
@@ -205,8 +212,8 @@ def main() -> None:
                             print_error(err)
                 except ApiRequestError as e:
                     print_error(str(e))
-                except Exception as e:
-                    print_error(f"Непредвиденная ошибка: {e}")
+                except OSError as e:
+                    print_error(f"Ошибка записи rates.json: {e}")
 
             elif command == "show-rates":
                 currency_filter = kwargs.get("currency")
@@ -226,8 +233,12 @@ def main() -> None:
                     )
                     continue
 
-                with open(config.rates_file_path, encoding="utf-8") as f:
-                    data = json.load(f)
+                try:
+                    with open(config.rates_file_path, encoding="utf-8") as f:
+                        data = json.load(f)
+                except (OSError, json.JSONDecodeError) as e:
+                    print_error(f"Не удалось прочитать rates.json: {e}")
+                    continue
 
                 pairs = data.get("pairs", {})
                 last_refresh = data.get("last_refresh", "неизвестно")
@@ -235,7 +246,7 @@ def main() -> None:
                 if not pairs:
                     print("Кеш пуст.")
                     continue
-                # Фильтрация
+
                 filtered_pairs = {}
                 for pair, info in pairs.items():
                     if currency_filter and currency_filter.upper() not in pair:
@@ -246,7 +257,6 @@ def main() -> None:
                     print_error(f"Курс для '{currency_filter}' не найден в кеше.")
                     continue
 
-                # Сортировка
                 if top_n:
                     sorted_pairs = sorted(
                         filtered_pairs.items(),
@@ -256,7 +266,6 @@ def main() -> None:
                 else:
                     sorted_pairs = sorted(filtered_pairs.items())
 
-                # Вывод таблицы
                 table = PrettyTable()
                 table.field_names = ["Пара", "Курс", "Обновлено", "Источник"]
                 table.align = "r"
@@ -282,18 +291,6 @@ def main() -> None:
         except KeyboardInterrupt:
             print("\nДо свидания!")
             sys.exit(0)
-        except Exception as e:
-            # Если это ошибка недостатка средств или неизвестной валюты,
-            # выводим чисто
-            error_text = str(e)
-            is_known_error = (
-                "Недостаточно средств" in error_text
-                or "Неизвестная валюта" in error_text
-            )
-            if is_known_error:
-                print_error(error_text)
-            else:
-                print_error(f"Непредвиденная ошибка: {e}")
 
 
 if __name__ == "__main__":

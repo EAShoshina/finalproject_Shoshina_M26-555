@@ -106,7 +106,7 @@ uv run wallet
 
 | Команда | Описание |
 |---------|----------|
-| `update-rates [--source coingecko\|exchangerate]` | Обновить курсы из внешних API |
+| `update-rates [--source <src>]` | Обновить курсы из внешних API (`coingecko` или `exchangerate`) |
 | `show-rates [--currency <curr>] [--top <n>]` | Показать кэш курсов с фильтрацией |
 
 ---
@@ -152,6 +152,11 @@ wallet> buy --currency DOGE --amount 100
 Ошибка: Неизвестная валюта 'DOGE'
 ```
 
+```text
+wallet> get-rate --from DOGE --to USD
+Ошибка: Неизвестная валюта 'DOGE'. Поддерживаемые коды: USD, EUR, RUB, BTC, ETH, SOL
+```
+
 ### 3. Работа с курсами (Parser Service)
 
 ```text
@@ -174,6 +179,32 @@ wallet> get-rate --from BTC --to USD
 
 **Без `EXCHANGERATE_API_KEY`** `update-rates` без `--source` вернёт `Update completed with errors` + `403` (демо-ключ), но `rates.json` обновится крипто-парами (3). Для фиата задайте ключ (см. ниже).
 
+### 4. Выход и справка
+
+```text
+wallet> logout
+Вы вышли из системы 'alice'
+
+wallet> logout
+Вы не были авторизованы
+
+wallet> help
+Доступные команды:
+  register --username <name> --password <pass>  : Регистрация
+  login --username <name> --password <pass>     : Вход
+  logout                                        : Выход
+  show-portfolio [--base <curr>]                : Портфель
+  buy --currency <curr> --amount <num>          : Купить
+  sell --currency <curr> --amount <num>         : Продать
+  get-rate --from <curr> --to <curr>            : Узнать курс
+  update-rates [--source <src>]                 : Обновить курсы
+  show-rates [--currency <curr>] [--top <n>]    : Показать курсы
+  exit                                          : Выход
+
+wallet> exit
+До свидания!
+```
+
 ---
 
 ## Продвинутые возможности (Архитектура)
@@ -189,6 +220,21 @@ wallet> get-rate --from BTC --to USD
 - **Атомарная запись**: `rates.json`, `exchange_rates.json`, `users.json`, `portfolios.json` пишутся через tmp → replace.
 - **Кэширование**: `@rate_cache(ttl_seconds=settings.rates_ttl_seconds)` (по умолчанию 300 с).
 - **TTL**: `rates.json` хранит `updated_at` и `last_refresh`; `get-rate` показывает дату обновления.
+
+---
+
+## Модель учёта USD (важно)
+
+В проекте реализована **упрощённая модель** учёта стоимости, соответствующая пошаговому описанию команд `buy`/`sell` из задания (Часть 2, Часть 3.5):
+
+- **`buy --currency <curr> --amount <n>`** — увеличивает баланс **покупаемой валюты** на `n`. USD **не списываются** (в задании нет способа получить стартовые USD: при регистрации создаётся пустой портфель).
+- **`sell --currency <curr> --amount <n>`** — уменьшает баланс **продаваемой валюты** на `n`. USD **не зачисляются** на отдельный кошелёк.
+- **Стоимость в USD** (`Оценочная стоимость покупки` / `Оценочная выручка`) рассчитывается по текущему курсу из `rates.json` (или `fallback_rates`) и выводится **справочно**, как оценка, а не как реальное движение USD.
+- **`show-portfolio`** считает итоговую стоимость всех кошельков в базовой валюте (`--base`, по умолчанию USD) по текущим курсам.
+
+**Почему так:** в задании (Часть 2, шаги `buy`/`sell`) списание/зачисление USD не предусмотрено, а стартовый баланс USD не задаётся. Полная модель (списание USD при `buy`, зачисление при `sell`, стартовый баланс, `InsufficientFundsError` при нехватке USD) допускается как расширение, но требует дополнительного источника стартовых USD, которого в задании нет.
+
+**Ошибки:** `InsufficientFundsError` выбрасывается при попытке продать больше, чем есть на балансе **торгуемой валюты** (`sell`), а не USD. `CurrencyNotFoundError` — при неизвестном коде валюты.
 
 ---
 

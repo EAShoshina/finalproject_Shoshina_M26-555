@@ -52,10 +52,11 @@ class SettingsLoader:
         self._initialized = True
 
     def get(self, key: str, default=None):
+        """Возвращает значение настройки по ключу или default."""
         return getattr(self, key, default)
 
     def reload(self):
-        """Перезагрузка конфигурации (заглушка для будущего расширения)."""
+        """Перезагружает конфигурацию (сбрасывает и инициализирует заново)."""
         self._initialized = False
         self.__init__()
 

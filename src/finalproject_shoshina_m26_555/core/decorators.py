@@ -26,26 +26,26 @@ def log_action(action_name: str, verbose: bool = False):
             else:
                 username = kwargs.get("username", "Unknown")
 
+            # Формируем extra_info один раз — для OK и ERROR
+            extra_info = ""
+            if verbose and "currency" in kwargs and "amount" in kwargs:
+                extra_info = (
+                    f" currency='{kwargs['currency']}' "
+                    f"amount={kwargs['amount']:.4f}"
+                )
+
             try:
                 result = func(*args, **kwargs)
-
-                # Формируем сообщение об успехе
-                extra_info = ""
-                if verbose and "currency" in kwargs and "amount" in kwargs:
-                    extra_info = (
-                        f" currency='{kwargs['currency']}' "
-                        f"amount={kwargs['amount']:.4f}"
-                    )
-
-                log_msg = f"{action_name} user='{username}'{extra_info} result=OK"
+                log_msg = (
+                    f"{action_name} user='{username}'{extra_info} result=OK"
+                )
                 logger.info(log_msg)
                 return result
 
             except Exception as e:
-                # Логируем ошибку и пробрасываем дальше
                 error_type = e.__class__.__name__
                 log_msg = (
-                    f"{action_name} user='{username}' result=ERROR "
+                    f"{action_name} user='{username}'{extra_info} result=ERROR "
                     f"error_type={error_type} error_message='{str(e)}'"
                 )
                 logger.error(log_msg)
@@ -77,6 +77,7 @@ def rate_cache(ttl_seconds: int = 300) -> Callable:
     cache: dict[tuple[str, str], tuple[float, float]] = {}
 
     def decorator(func: Callable) -> Callable:
+        @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             from_curr = args[1]
             to_curr = args[2]
