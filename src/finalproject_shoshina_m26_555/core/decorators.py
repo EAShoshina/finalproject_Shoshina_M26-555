@@ -19,9 +19,12 @@ def log_action(action_name: str, verbose: bool = False):
         def wrapper(*args, **kwargs) -> Any:
             # args[0] - это self (AppContext)
             context = args[0]
-            username = (
-                context.current_user.username if context.current_user else "Unknown"
-            )
+            if context.current_user:
+                username = context.current_user.username
+            elif len(args) > 1 and isinstance(args[1], str):
+                username = args[1]
+            else:
+                username = kwargs.get("username", "Unknown")
 
             try:
                 result = func(*args, **kwargs)

@@ -28,6 +28,7 @@ class DatabaseManager:
         self._initialized = True
 
     def load(self, filename: str) -> Any:
+        """Загружает JSON-файл из data/."""
         filepath = settings.data_dir / filename
         if not filepath.exists():
             return [] if filename != "rates.json" else {}
@@ -35,9 +36,13 @@ class DatabaseManager:
             return json.load(f)
 
     def save(self, filename: str, data: Any) -> None:
+        """Атомарно сохраняет данные в JSON-файл (tmp → replace)."""
         filepath = settings.data_dir / filename
-        with open(filepath, "w", encoding="utf-8") as f:
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = filepath.with_suffix(filepath.suffix + ".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+        tmp_path.replace(filepath)
 
 
 # Глобальный экземпляр

@@ -17,8 +17,12 @@ def setup_logging():
 
     # Ротация: макс 5 МБ, хранит 3 старых файла
     handler = RotatingFileHandler(
-        log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+        log_file,
+        maxBytes=settings.log_max_bytes,
+        backupCount=settings.log_backup_count,
+        encoding="utf-8",
     )
+
     handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 
     logger = logging.getLogger("ValutaTrade")

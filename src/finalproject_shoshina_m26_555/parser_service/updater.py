@@ -14,6 +14,11 @@ logger = logging.getLogger("ValutaTrade")
 class RatesUpdater:
     """Точка входа для логики парсинга курсов."""
 
+    SOURCE_NAMES = {
+        "CoinGeckoClient": "coingecko",
+        "ExchangeRateApiClient": "exchangerate",
+    }
+
     def __init__(self, config: ParserConfig, storage: ParserStorage):
         self.config = config
         self.storage = storage
@@ -32,9 +37,10 @@ class RatesUpdater:
         errors = []
 
         for client in self.clients:
-            client_name = client.__class__.__name__.replace("Client", "")
+            cls_name = client.__class__.__name__
+            client_name = self.SOURCE_NAMES.get(cls_name, cls_name)
 
-            if source_filter and client_name.lower() != source_filter:
+            if source_filter and client_name != source_filter.lower():
                 continue
 
             logger.info(f"Fetching from {client_name}...")
@@ -48,6 +54,13 @@ class RatesUpdater:
                 errors.append(error_msg)
 
         if not all_rates:
+            if errors:
+                logger.error("No rates fetched. Errors: %s", errors)
+                return {
+                    "success": False,
+                    "rates_count": 0,
+                    "errors": errors,
+                }
             raise ApiRequestError("No rates fetched. Check network or API limits.")
 
         primary_source = "CoinGecko" if "BTC_USD" in all_rates else "ExchangeRate-API"

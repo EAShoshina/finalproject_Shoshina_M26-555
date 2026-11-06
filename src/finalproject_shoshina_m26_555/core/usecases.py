@@ -1,14 +1,14 @@
 """Business logic and use cases for the application."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from prettytable import PrettyTable
 
+from ..exceptions import ApiRequestError
 from ..infra.database import db
 from ..infra.settings import settings
 from .currencies import get_currency
 from .decorators import confirm_action, log_action, rate_cache
-from .exceptions import ApiRequestError, InsufficientFundsError
 from .models import Portfolio, User
 
 
@@ -31,8 +31,11 @@ class AppContext:
         if any(u["username"].lower() == username.lower() for u in users):
             raise ValueError(f"Имя пользователя '{username}' уже занято")
 
-        if len(password) < 4:
-            raise ValueError("Пароль должен быть не короче 4 символов")
+        if len(password) < settings.min_password_length:
+            raise ValueError(
+                f"Пароль должен быть не короче "
+                f"{settings.min_password_length} символов"
+            )
 
         new_id = self._get_next_user_id()
         new_user = User(user_id=new_id, username=username, password=password)
@@ -156,8 +159,8 @@ class AppContext:
             f"Оценочная стоимость покупки: {cost_usd:,.2f} USD"
         )
 
-    @log_action("SELL", verbose=True)
     @confirm_action("Вы уверены, что хотите продать эту валюту? [y/N]: ")
+    @log_action("SELL", verbose=True)
     def sell(self, currency: str, amount: float) -> str:
         if not self.current_user or not self.current_portfolio:
             raise ValueError("Сначала выполните login")
@@ -166,13 +169,6 @@ class AppContext:
 
         currency_code = currency.upper()
         wallet = self.current_portfolio.get_wallet(currency_code)
-
-        if amount > wallet.balance:
-            raise InsufficientFundsError(
-                available=wallet.balance,
-                required=amount,
-                code=currency_code,
-            )
 
         old_balance = wallet.balance
         wallet.withdraw(amount)
@@ -208,16 +204,15 @@ class AppContext:
         return (
             f"Курс {from_curr}→{to_curr}: {rate:.8f} "
             f"(обновлено: {updated_at})\n"
-            f"Обратный курс {to_curr}→{from_curr}: {inverse_rate:.2f}"
+            f"Обратный курс {to_curr}→{from_curr}: {inverse_rate:.8f}"
         )
 
     @rate_cache(ttl_seconds=settings.rates_ttl_seconds)
     def _get_rate(self, from_curr: str, to_curr: str) -> tuple[float, str]:
         """Внутренний метод получения курса.
         Возвращает кортеж (rate, updated_at)."""
-        rates_data = db.load("rates.json")
-        if not isinstance(rates_data, dict):
-            rates_data = {}
+        raw = db.load("rates.json")
+        rates_data = raw.get("pairs", {}) if isinstance(raw, dict) else {}
 
         pair = f"{from_curr}_{to_curr}"
         if pair in rates_data and "rate" in rates_data[pair]:
@@ -232,18 +227,11 @@ class AppContext:
             return rate, updated_at
 
         # Заглушка (имитация API)
-        fallback_rates = {
-            "USD": 1.0,
-            "EUR": 1.0786,
-            "BTC": 59337.21,
-            "RUB": 0.01016,
-            "ETH": 3720.00,
-        }
+        fallback_rates = settings.fallback_rates
         if from_curr in fallback_rates and to_curr in fallback_rates:
             rate = fallback_rates[from_curr] / fallback_rates[to_curr]
-            updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            updated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             return rate, updated_at
-
         raise ApiRequestError(f"Не удалось получить курс для {from_curr}→{to_curr}")
 
     def _save_portfolio(self) -> None:

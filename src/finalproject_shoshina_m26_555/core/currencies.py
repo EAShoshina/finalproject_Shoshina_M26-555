@@ -5,6 +5,11 @@ from abc import ABC, abstractmethod
 
 from ..exceptions import CurrencyNotFoundError
 
+# Константы market_cap для криптовалют (используются в _REGISTRY)
+_BTC_MARKET_CAP = 1.12e12
+_ETH_MARKET_CAP = 4.50e11
+_SOL_MARKET_CAP = 8.50e10
+
 
 class Currency(ABC):
     """Абстрактный базовый класс для всех валют."""
@@ -57,11 +62,10 @@ _REGISTRY: dict[str, type[Currency]] = {
     "USD": lambda: FiatCurrency("US Dollar", "USD", "United States"),
     "EUR": lambda: FiatCurrency("Euro", "EUR", "Eurozone"),
     "RUB": lambda: FiatCurrency("Russian Ruble", "RUB", "Russia"),
-    "BTC": lambda: CryptoCurrency("Bitcoin", "BTC", "SHA-256", 1.12e12),
-    "ETH": lambda: CryptoCurrency("Ethereum", "ETH", "Ethash", 4.50e11),
-    "SOL": lambda: CryptoCurrency("Solana", "SOL", "PoH", 8.50e10),
+    "BTC": lambda: CryptoCurrency("Bitcoin", "BTC", "SHA-256", _BTC_MARKET_CAP),
+    "ETH": lambda: CryptoCurrency("Ethereum", "ETH", "Ethash", _ETH_MARKET_CAP),
+    "SOL": lambda: CryptoCurrency("Solana", "SOL", "PoH", _SOL_MARKET_CAP),
 }
-
 
 def get_currency(code: str) -> Currency:
     """Фабричный метод для получения экземпляра валюты по коду."""

@@ -126,7 +126,7 @@ def main() -> None:
 
                 try:
                     amount = float(amount_str)
-                    print(context.buy(currency, amount))
+                    print(context.buy(currency=currency, amount=amount))
                 except ValueError as e:
                     if "could not convert string to float" in str(e):
                         print_error("'amount' должен быть числом")
@@ -148,7 +148,7 @@ def main() -> None:
 
                 try:
                     amount = float(amount_str)
-                    result = context.sell(currency, amount)
+                    result = context.sell(currency=currency, amount=amount)
                     print(result)
                 except ValueError as e:
                     if "could not convert string to float" in str(e):

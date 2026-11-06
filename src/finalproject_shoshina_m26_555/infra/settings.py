@@ -27,11 +27,27 @@ class SettingsLoader:
         self.base_dir = Path(__file__).resolve().parents[3]
         self.data_dir = self.base_dir / "data"
         self.logs_dir = self.base_dir / "logs"
-
         # Параметры по умолчанию
         self.rates_ttl_seconds = 300
         self.default_base_currency = "USD"
         self.log_level = "INFO"
+
+        # Логирование
+        self.log_max_bytes = 5 * 1024 * 1024
+        self.log_backup_count = 3
+
+        # Валидация
+        self.min_password_length = 4
+
+        # Заглушки курсов (fallback, если rates.json пуст)
+        self.fallback_rates = {
+            "USD": 1.0,
+            "EUR": 1.0786,
+            "BTC": 59337.21,
+            "RUB": 0.01016,
+            "ETH": 3720.00,
+            "SOL": 150.0,
+        }
 
         self._initialized = True
 

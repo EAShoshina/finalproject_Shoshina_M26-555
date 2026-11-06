@@ -1,8 +1,11 @@
 """Domain models for the currency wallet."""
 
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+from ..exceptions import InsufficientFundsError
+from ..infra.settings import settings
 from .utils import generate_salt, hash_password
 
 
@@ -19,6 +22,15 @@ class User:
     ):
         self._user_id = user_id
         self.username = username  # Использует сеттер для валидации
+        if (
+            not isinstance(password, str)
+            or len(password) < settings.min_password_length
+        ):
+            raise ValueError(
+                f"Пароль должен быть не короче "
+                f"{settings.min_password_length} символов"
+            )
+
         self._salt = salt or generate_salt()
         self._hashed_password = hash_password(password, self._salt)
         self._registration_date = registration_date or datetime.now().isoformat()
@@ -47,8 +59,14 @@ class User:
 
     def change_password(self, new_password: str) -> None:
         """Изменяет пароль пользователя с хешированием."""
-        if not isinstance(new_password, str) or len(new_password) < 4:
-            raise ValueError("Пароль должен быть не короче 4 символов")
+        if (
+            not isinstance(new_password, str)
+            or len(new_password) < settings.min_password_length
+        ):
+            raise ValueError(
+                f"Пароль должен быть не короче "
+                f"{settings.min_password_length} символов"
+            )
         self._salt = generate_salt()
         self._hashed_password = hash_password(new_password, self._salt)
 
@@ -112,9 +130,10 @@ class Wallet:
         if not isinstance(amount, (int, float)) or amount <= 0:
             raise ValueError("'amount' должен быть положительным числом")
         if amount > self.balance:
-            raise ValueError(
-                f"Недостаточно средств: доступно {self.balance:.4f}, "
-                f"требуется {amount:.4f}"
+            raise InsufficientFundsError(
+                available=self.balance,
+                required=amount,
+                code=self.currency_code,
             )
         self.balance -= amount
 
@@ -165,23 +184,36 @@ class Portfolio:
         return self._wallets[code]
 
     def get_total_value(
-        self, base_currency: str = "USD", get_rate_func: callable = None
+        self,
+        base_currency: str = "USD",
+        get_rate_func: Callable[[str, str], float] | None = None,
     ) -> float:
         """Возвращает общую стоимость всех валют в base_currency."""
         total = 0.0
         base_code = base_currency.upper()
 
+        fallback_rates = settings.fallback_rates
+
         for wallet in self._wallets.values():
             if wallet.currency_code == base_code:
                 total += wallet.balance
+            elif get_rate_func:
+                total += wallet.balance * get_rate_func(
+                    wallet.currency_code, base_code
+                )
+            elif (
+                wallet.currency_code in fallback_rates
+                and base_code in fallback_rates
+            ):
+                rate = (
+                    fallback_rates[wallet.currency_code] / fallback_rates[base_code]
+                )
+                total += wallet.balance * rate
             else:
-                if get_rate_func:
-                    rate = get_rate_func(wallet.currency_code, base_code)
-                    total += wallet.balance * rate
-                else:
-                    raise ValueError(
-                        "Не передана функция получения курса для конвертации"
-                    )
+                raise ValueError(
+                    f"Не удалось получить курс "
+                    f"{wallet.currency_code}→{base_code}"
+                )
         return total
 
     def to_dict(self) -> dict[str, Any]:
